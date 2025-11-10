@@ -1,0 +1,106 @@
+<div class="download-container">
+  <div class="download-card">
+    @if (isConnecting() && !progress()) {
+      <div class="connecting-state">
+        <div class="spinner"></div>
+        <h2>Connecting to sender...</h2>
+        <p>Please wait while we establish a peer-to-peer connection</p>
+      </div>
+    } @else if (error() && progress()?.status !== 'transferring') {
+      <div class="error-state">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+          <path d="M12 8V12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M12 16H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <h2>Connection Error</h2>
+        <p>{{ error() }}</p>
+        <button class="retry-button" (click)="connectToSender(roomId())">Retry</button>
+        <button class="home-button" (click)="goHome()">Go Home</button>
+      </div>
+    } @else if (progress()) {
+      <div class="download-state">
+        @if (progress()!.status === 'connecting') {
+          <div class="status-header">
+            <div class="spinner"></div>
+            <h2>Waiting for file...</h2>
+          </div>
+        } @else if (progress()!.status === 'transferring') {
+          <div class="status-header">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <h2>Downloading File</h2>
+            <p class="file-name">{{ progress()!.fileName }}</p>
+          </div>
+
+          <div class="progress-section">
+            <div class="progress-bar-container">
+              <div class="progress-bar">
+                <div 
+                  class="progress-fill" 
+                  [style.width.%]="progress()!.percentage"
+                ></div>
+              </div>
+              <div class="progress-info">
+                <span class="percentage">{{ progress()!.percentage }}%</span>
+                <span class="bytes">
+                  {{ formatFileSize(progress()!.bytesTransferred) }} / 
+                  {{ formatFileSize(progress()!.totalBytes) }}
+                </span>
+              </div>
+            </div>
+          </div>
+        } @else if (progress()!.status === 'completed') {
+          <div class="completed-state">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+              <path d="M8 12L11 15L16 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <h2>Download Complete!</h2>
+            <p class="file-name">{{ progress()!.fileName }}</p>
+            <p class="file-size">{{ formatFileSize(progress()!.totalBytes) }}</p>
+            
+            @if (progress()!.file || downloadedFile) {
+              <div class="download-section">
+                <p class="download-info" style="color: #48bb78; margin-bottom: 1rem; font-weight: 600; font-size: 1rem;">
+                  ✓ File received successfully! 
+                  @if (downloadTriggered()) {
+                    Download should start automatically...
+                  }
+                </p>
+                <button 
+                  class="download-button" 
+                  (click)="downloadFile()"
+                  style="width: 100%; margin-bottom: 1rem; font-size: 1.125rem; padding: 1.25rem;"
+                  #downloadBtn
+                >
+                  @if (downloadTriggered()) {
+                    📥 Download File (Click if not started)
+                  } @else {
+                    📥 Download File Now
+                  }
+                </button>
+                <p class="hint-text" style="text-align: center; color: #718096; font-size: 0.875rem; margin-top: 0.5rem;">
+                  @if (downloadTriggered()) {
+                    If download didn't start automatically, click the button above or check your browser's download settings.
+                  } @else {
+                    Click the button above to download the file.
+                  }
+                </p>
+              </div>
+            } @else {
+              <p class="error-message" style="color: #e53e3e; margin: 1rem 0; padding: 1rem; background: #fed7d7; border-radius: 8px;">
+                ⚠️ File not available. The file may not have been received correctly. Please refresh the page and try again.
+              </p>
+            }
+            
+            <button class="home-button" (click)="goHome()">Share Another File</button>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>

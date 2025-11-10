@@ -1,0 +1,204 @@
+<div class="upload-container">
+  <div class="upload-card">
+    <h1 class="title">Share File via WebRTC</h1>
+    <p class="subtitle">Upload a file and share it peer-to-peer</p>
+
+    <div class="upload-area" [class.drag-over]="false">
+      <input
+        type="file"
+        id="file-input"
+        (change)="onFileSelected($event)"
+        accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
+        class="file-input"
+      />
+      <label for="file-input" class="file-label">
+        @if (!selectedFile) {
+          <div class="upload-placeholder">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.89 22 5.99 22H18C19.1 22 20 21.1 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M14 2V8H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M16 13H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M16 17H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M10 9H9H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <p class="upload-text">Click to select a file or drag and drop</p>
+            <p class="upload-hint">PDF, DOC, DOCX, TXT, JPG, PNG</p>
+          </div>
+        } @else {
+          <div class="file-info">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.89 22 5.99 22H18C19.1 22 20 21.1 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M14 2V8H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <div class="file-details">
+              <p class="file-name">{{ selectedFile.name }}</p>
+              <p class="file-size">{{ formatFileSize(selectedFile.size || 0) }}</p>
+            </div>
+          </div>
+        }
+      </label>
+    </div>
+
+    @if (error()) {
+      <div class="error-message">
+        {{ error() }}
+      </div>
+    }
+
+    @if (selectedFile && isReady()) {
+      <div class="connection-status">
+        <span class="status-indicator ready"></span>
+        <span>Receiver connected - Ready to share</span>
+      </div>
+    } @else if (selectedFile && isWaitingForReceiver()) {
+      <div class="connection-status">
+        <span class="status-indicator connecting"></span>
+        <span>Waiting for receiver to connect... Share the link above</span>
+      </div>
+    } @else if (selectedFile) {
+      <div class="connection-status">
+        <span class="status-indicator connecting"></span>
+        <span>Initializing connection...</span>
+      </div>
+    }
+
+    @if (isUploading()) {
+      <div class="progress-container">
+        <div class="progress-bar">
+          <div class="progress-fill" [style.width.%]="uploadProgress()"></div>
+        </div>
+        <p class="progress-text">{{ uploadProgress() }}% uploaded</p>
+      </div>
+    }
+
+    @if (selectedFile && shareableLink()) {
+      <div class="share-link-container">
+        <!-- <label class="link-label">Share this link with receiver:</label> -->
+        @if (isDetectingIP() && networkService.isLocalhost() && !localIP() && !manualIP()) {
+          <div class="ip-detection-info">
+            <p class="info-text">Detecting network IP address...</p>
+          </div>
+        }
+        @if ((showManualIP() || (!localIP() && networkService.isLocalhost())) && selectedFile) {
+          <div class="manual-ip-section">
+            <p class="info-text">
+              @if (!localIP() && !manualIP()) {
+                <strong>IP Detection:</strong> Unable to detect IP automatically. Your system IP appears to be <strong>172.23.10.125</strong>. Please verify and enter it below:
+              } @else {
+                <strong>Current IP:</strong> <strong style="color: #667eea;">{{ localIP() || manualIP() }}</strong>
+                @if (localIP() && manualIP() && localIP() !== manualIP()) {
+                  <span style="color: #ed8936;">(Manual override: {{ manualIP() }})</span>
+                }
+              }
+            </p>
+            <div class="ip-input-group">
+              <input
+                type="text"
+                [value]="manualIP() || localIP() || '172.23.10.125'"
+                (input)="manualIP.set($any($event.target).value); onManualIPChange()"
+                placeholder="172.23.10.125"
+                class="ip-input"
+              />
+              <!-- <p class="hint-text">
+                <strong>Your detected system IP:</strong> <code>172.23.10.125</code><br>
+                If this is incorrect, find your IP: <strong>Windows</strong> (<code>ipconfig</code>) | 
+                <strong>Mac/Linux</strong> (<code>ifconfig</code> or <code>ip addr</code>)
+              </p> -->
+            </div>
+          </div>
+        } @else if (localIP() && selectedFile) {
+          <div class="ip-detected-info" style="margin-bottom: 1rem; padding: 0.75rem; background: #c6f6d5; border-radius: 8px; border: 1px solid #48bb78;">
+            <p class="info-text" style="margin: 0; color: #22543d;">
+              ✓ IP detected: <strong>{{ localIP() }}</strong>
+            </p>
+          </div>
+        }
+        <div class="link-input-group">
+          <input
+            type="text"
+            [value]="shareableLink()"
+            readonly
+            class="link-input"
+            #linkInput
+          />
+          <button
+            type="button"
+            (click)="copyToClipboard()"
+            class="copy-button"
+            title="Copy to clipboard"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M16 1H4C2.9 1 2 1.9 2 3V17H4V3H16V1ZM19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+        @if (networkService.isLocalhost()) {
+          <div class="network-info">
+            <p class="info-text">
+              <!-- <strong>⚠️ Troubleshooting "Site Can't Be Reached":</strong> -->
+            </p>
+            <!-- <ul class="info-list">
+              <li><strong>Step 1:</strong> Verify dev server is running with <code>npm start</code> (should show "Listening on 0.0.0.0:4200")</li>
+              <li><strong>Step 2:</strong> Verify IP address is correct - check using:
+                <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                  <li>Windows: Open CMD, type <code>ipconfig</code>, look for "IPv4 Address" under your active network adapter</li>
+                  <li>Mac/Linux: Open Terminal, type <code>ifconfig</code> or <code>ip addr</code>, look for "inet" address (usually starts with 192.168.x.x or 10.x.x.x)</li>
+                </ul>
+              </li>
+              <li><strong>Step 3:</strong> Test the link on the SAME device first - replace YOUR_IP in the link with 127.0.0.1 or localhost to verify the server works</li>
+              <li><strong>Step 4:</strong> Ensure both devices are on the same WiFi/network</li>
+              <li><strong>Step 5:</strong> Check firewall - allow port 4200 or temporarily disable firewall to test</li>
+              <li><strong>Step 6:</strong> Try accessing <code>http://[YOUR_IP]:4200</code> directly in browser on the other device (replace [YOUR_IP] with your actual IP)</li>
+            </ul> -->
+            <div class="test-link-section" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #cbd5e0;">
+              <!-- <p class="info-text" style="margin-bottom: 0.5rem;">
+                <strong>🔍 Diagnostic Test URL:</strong> Try this URL on the other device first:
+              </p> -->
+              <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem;">
+                <!-- <code class="test-url" style="flex: 1; padding: 0.75rem; background: #2d3748; color: #fff; border-radius: 4px; word-break: break-all; font-size: 0.875rem;">
+                  http://{{ localIP() || manualIP() || '172.23.10.125' }}:4200
+                </code> -->
+                <!-- <button 
+                  type="button" 
+                  (click)="copyTestUrl()"
+                  class="copy-button"
+                  style="padding: 0.75rem 1rem;"
+                  title="Copy test URL"
+                >
+                  Copy
+                </button> -->
+              </div>
+              <!-- <div style="background: #fed7d7; padding: 0.75rem; border-radius: 4px; margin-top: 0.5rem;">
+                <p class="info-text" style="margin: 0; color: #c53030; font-size: 0.875rem;">
+                  <strong>If test URL doesn't work:</strong>
+                </p>
+                <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem; color: #c53030; font-size: 0.875rem;">
+                  <li>Verify server is running: Check terminal for "Listening on 0.0.0.0:4200"</li>
+                  <li>Check firewall: Allow port 4200 or temporarily disable firewall</li>
+                  <li>Verify IP: Ensure <code>172.23.10.125</code> is your correct IP (run <code>ip addr</code> or <code>ifconfig</code>)</li>
+                  <li>Test locally: Try <code>http://127.0.0.1:4200</code> on the same machine first</li>
+                  <li>Network: Ensure both devices are on the same network (same WiFi/router)</li>
+                </ul>
+              </div> -->
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    @if (selectedFile && !isUploading()) {
+      <button
+        type="button"
+        (click)="shareFile()"
+        class="share-button"
+        [disabled]="!isReady()"
+      >
+        @if (isReady()) {
+          Share File
+        } @else {
+          Waiting for Receiver...
+        }
+      </button>
+    }
+  </div>
+</div>
